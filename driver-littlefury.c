@@ -348,6 +348,10 @@ bool littlefury_thread_init(struct thr_info *thr)
 		};
 		
 		proc->device_data = bitfury;
+		
+		bitfury->osc6_bits = 50;
+		send_reinit(bitfury->spi, bitfury->slot, bitfury->fasync, bitfury->osc6_bits);
+		bitfury_init_chip(cgpu);
 	}
 	
 	fd = cgpu->device_fd = serial_open(cgpu->device_path, 0, 10, true);
@@ -361,6 +365,8 @@ bool littlefury_thread_init(struct thr_info *thr)
 	if (!(bitfury_do_packet(LOG_DEBUG, littlefury_drv.dname, fd, buf, &bufsz, LFOP_REGPWR, "\1", 1) && bufsz && buf[0]))
 		applog(LOG_WARNING, "%s: Unable to power on chip(s)", cgpu->dev_repr);
 	
+	timer_set_now(&thr->tv_poll);
+	cgpu->status = LIFE_INIT2;
 	return true;
 }
 
@@ -381,8 +387,22 @@ struct device_drv littlefury_drv = {
 	.name = "LFY",
 	.drv_detect = littlefury_detect,
 	
-	.minerloop = hash_queued_work,
 	.thread_init = littlefury_thread_init,
-	.scanwork = bitfury_scanHash,
 	.thread_shutdown = littlefury_shutdown,
+	
+	.minerloop = minerloop_async,
+	.job_prepare = bitfury_job_prepare,
+	.job_start = bitfury_noop_job_start,
+	.poll = bitfury_do_io,
+	.job_process_results = bitfury_job_process_results,
+	
+	.get_api_extra_device_detail = bitfury_api_device_detail,
+	.get_api_extra_device_status = bitfury_api_device_status,
+	.set_device = bitfury_set_device,
+	
+#ifdef HAVE_CURSES
+	.proc_wlogprint_status = bitfury_wlogprint_status,
+	.proc_tui_wlogprint_choices = bitfury_tui_wlogprint_choices,
+	.proc_tui_handle_choice = bitfury_tui_handle_choice,
+#endif
 };
