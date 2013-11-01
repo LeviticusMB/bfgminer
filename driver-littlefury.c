@@ -134,7 +134,7 @@ bool bitfury_do_packet(int prio, const char *repr, const int fd, void * const bu
 		{
 			char hex[(sz * 2) + 1];
 			bin2hex(hex, pkt, sz);
-			applog(LOG_DEBUG, "%s: DEVPROTO: SEND %s", repr, hex);
+			applog(LOG_DEBUG, "%s: DEVPROTO: SEND %s (fd=%d)", repr, hex, fd);
 		}
 		r = write(fd, pkt, sz);
 		if (sz != r)
